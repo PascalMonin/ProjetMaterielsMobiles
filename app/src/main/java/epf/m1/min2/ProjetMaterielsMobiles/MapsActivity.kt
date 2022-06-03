@@ -1,19 +1,21 @@
 package epf.m1.min2.ProjetMaterielsMobiles
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface
 import epf.m1.min2.ProjetMaterielsMobiles.api.RetroModel
 import epf.m1.min2.ProjetMaterielsMobiles.databinding.ActivityMapsBinding
+import kotlinx.android.synthetic.main.activity_maps.*
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
@@ -22,10 +24,12 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
+
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
+    private val retroModelArrayList: ArrayList<RetroModel> = ArrayList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +60,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         //mMap.addMarker(MarkerOptions().position(Paris).title("Marker sur Paris"))
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Paris, 11.5f))
         mMap.clear()
+
+        // Set a listener for marker click.
+        mMap.setOnMarkerClickListener(this)
 
         getResponse()
     }
@@ -94,7 +101,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             //getting the whole json object from the response
             val obj = JSONObject(response)
 
-            val retroModelArrayList: ArrayList<RetroModel> = ArrayList()
+
             Toast.makeText(this@MapsActivity, "test", Toast.LENGTH_SHORT)
                 .show()
             val dataArray = obj.getJSONObject("data") //.getJSONArray("data")
@@ -104,20 +111,45 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             for (i in 0 until stationsArray.length()) {
                 val retroModel = RetroModel()
                 val dataObj = stationsArray.getJSONObject(i)
+                retroModel.station_id=dataObj.getString("station_id").toLong()
+                retroModel.name=dataObj.getString("name")
                 retroModel.lat = dataObj.getString("lat").toDouble()
                 retroModel.lon = dataObj.getString("lon").toDouble()
+                retroModel.capacity=dataObj.getString("capacity").toInt()
+                retroModel.stationCode=dataObj.getString("stationCode")
                 retroModelArrayList.add(retroModel)
 
             }
             for (j in 0 until retroModelArrayList.size) {
-                mMap.addMarker(MarkerOptions()
-                    .position(LatLng(retroModelArrayList[j].lat,retroModelArrayList[j].lon))
-                    .title("Station"))
+                var marker = mMap.addMarker(
+                    MarkerOptions()
+                        .position(LatLng(retroModelArrayList[j].lat, retroModelArrayList[j].lon))
+                        .title("Station")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                )
+                marker?.tag=j
+                //.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_velo))
+
             }
 
         } catch (e: JSONException) {
             e.printStackTrace()
         }
+    }
+
+    /** Called when the user clicks a marker.  */
+    override fun onMarkerClick(marker: Marker): Boolean {
+
+        var position = marker.tag
+
+        infos_station.text=""
+        infos_station.text=retroModelArrayList[position as Int].station_id.toString()
+
+
+        // Return false to indicate that we have not consumed the event and that we wish
+        // for the default behavior to occur (which is for the camera to move such that the
+        // marker is centered and for the marker's info window to open, if it has one).
+        return false
     }
 
 }
