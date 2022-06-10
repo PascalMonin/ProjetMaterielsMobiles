@@ -1,9 +1,12 @@
 package epf.m1.min2.ProjetMaterielsMobiles
 
+import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.room.Room
+import com.google.android.gms.cast.Cast
 
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -13,7 +16,10 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface
 import epf.m1.min2.ProjetMaterielsMobiles.api.RetroModel
+import epf.m1.min2.ProjetMaterielsMobiles.dao.StationDao
 import epf.m1.min2.ProjetMaterielsMobiles.databinding.ActivityMapsBinding
+import epf.m1.min2.ProjetMaterielsMobiles.db.AppDatabase
+import epf.m1.min2.ProjetMaterielsMobiles.entity.Station
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
@@ -37,6 +43,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
     }
 
     /**
@@ -58,6 +65,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap.clear()
 
         getResponse()
+
+        createMarkers()
     }
 
     private fun getResponse() {
@@ -75,7 +84,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     if (response.body() != null) {
                         Log.i("onSuccess", response.body().toString())
                         val jsonResponse = response.body().toString()
-                        createMarkers(jsonResponse)
+                        val jsonArray = JSONObject(jsonResponse)
+                            .getJSONObject("data")
+                            .getJSONArray("stations")
+
+                        val stationList: ArrayList<Station> = ArrayList()
+                        for (i in 0 until jsonArray.length()) {
+                            val station : Station
+                            val dataObj = jsonArray.getJSONObject(i)
+                            station = Station(dataObj.getString("lat").toDouble(),dataObj.getString("lon").toDouble())
+                            stationList.add(station)
+                        }
+                        val list: List<Station> = stationList.toList()
+
+                        val db = getDatabase(applicationContext)
+                        db.stationDao().insertAll(list)
+
                     } else {
                         Log.i(
                             "onEmptyResponse",
@@ -89,35 +113,27 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         })
     }
 
-    private fun createMarkers(response: String) {
-        try {
-            //getting the whole json object from the response
-            val obj = JSONObject(response)
-
-            val retroModelArrayList: ArrayList<RetroModel> = ArrayList()
-            Toast.makeText(this@MapsActivity, "test", Toast.LENGTH_SHORT)
-                .show()
-            val dataArray = obj.getJSONObject("data") //.getJSONArray("data")
-
-            val stationsArray = dataArray.getJSONArray("stations")
-
-            for (i in 0 until stationsArray.length()) {
-                val retroModel = RetroModel()
-                val dataObj = stationsArray.getJSONObject(i)
-                retroModel.lat = dataObj.getString("lat").toDouble()
-                retroModel.lon = dataObj.getString("lon").toDouble()
-                retroModelArrayList.add(retroModel)
-
-            }
-            for (j in 0 until retroModelArrayList.size) {
-                mMap.addMarker(MarkerOptions()
-                    .position(LatLng(retroModelArrayList[j].lat,retroModelArrayList[j].lon))
-                    .title("Station"))
-            }
-
-        } catch (e: JSONException) {
-            e.printStackTrace()
-        }
+    private fun getDatabase(context: Context): AppDatabase {
+        val db = Room.databaseBuilder(
+            context,
+            AppDatabase::class.java, "database-name"
+        ).allowMainThreadQueries().build()
+        return db
     }
 
+    private fun createMarkers(){
+    try{
+        val db = getDatabase(applicationContext)
+        val listStation = ArrayList(db.stationDao().getAll())
+        for (j in 0 until listStation.size) {
+            mMap.addMarker(MarkerOptions()
+                .position(LatLng(listStation[j].lat,listStation[j].lon))
+                .title(listStation[j].lat.toString() + "/" + listStation[j].lon.toString()))
+        }
+
+    } catch (e: JSONException) {
+        e.printStackTrace()
+    }
 }
+    }
+
