@@ -11,4 +11,7 @@ public interface ApiInterface {
     @GET("station_information.json")
     Call<String> getString();
 
+
+
+
 }

@@ -13,6 +13,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface
+import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface2
 import epf.m1.min2.ProjetMaterielsMobiles.api.RetroModel
 import epf.m1.min2.ProjetMaterielsMobiles.databinding.ActivityMapsBinding
 import kotlinx.android.synthetic.main.activity_maps.*
@@ -65,6 +66,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         mMap.setOnMarkerClickListener(this)
 
         getResponse()
+
     }
 
     private fun getResponse() {
@@ -96,17 +98,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         })
     }
 
+
+
     private fun createMarkers(response: String) {
         try {
             //getting the whole json object from the response
             val obj = JSONObject(response)
 
-
             Toast.makeText(this@MapsActivity, "test", Toast.LENGTH_SHORT)
                 .show()
-            val dataArray = obj.getJSONObject("data") //.getJSONArray("data")
+            var dataArray = obj.getJSONObject("data") //.getJSONArray("data")
 
-            val stationsArray = dataArray.getJSONArray("stations")
+            var stationsArray = dataArray.getJSONArray("stations")
 
             for (i in 0 until stationsArray.length()) {
                 val retroModel = RetroModel()
@@ -120,6 +123,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                 retroModelArrayList.add(retroModel)
 
             }
+
+
             for (j in 0 until retroModelArrayList.size) {
                 var marker = mMap.addMarker(
                     MarkerOptions()
@@ -132,10 +137,68 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
             }
 
+            detailsStation()
+
         } catch (e: JSONException) {
             e.printStackTrace()
         }
     }
+
+
+    private fun detailsStation(){
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(ApiInterface2.JSONURL2)
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .build()
+        val api = retrofit.create(ApiInterface2::class.java)
+        val call = api.string2
+        call.enqueue(object : Callback<String?> {
+            override fun onResponse(call: Call<String?>, response: Response<String?>) {
+                Log.i("Responsestring", response.body().toString())
+                //Toast.makeText()
+                if (response.isSuccessful) {
+                    if (response.body() != null) {
+                        Log.i("onSuccess", response.body().toString())
+                        val jsonResponse = response.body().toString()
+
+
+                        val obj2 = JSONObject(jsonResponse)
+                        val dataArray = obj2.getJSONObject("data") //.getJSONArray("data")
+
+                        val stationsArray = dataArray.getJSONArray("stations")
+
+
+                        for(k in 0 until retroModelArrayList.size){
+                            for(l in 0 until stationsArray.length()){
+                                val dataObj = stationsArray.getJSONObject(l)
+                                if (retroModelArrayList[k].station_id==dataObj.getString("station_id").toLong()){
+                                    retroModelArrayList[k].isIs_installed=dataObj.getString("is_installed").toInt().equals(1)
+                                    retroModelArrayList[k].isIs_renting=dataObj.getString("is_renting").toInt().equals(1)
+                                    retroModelArrayList[k].isIs_returning=dataObj.getString("is_returning").toInt().equals(1)
+                                    retroModelArrayList[k].numBikesAvailable=dataObj.getString("numBikesAvailable").toInt()
+                                }
+                            }
+                        }
+
+
+                    } else {
+                        Log.i(
+                            "onEmptyResponse",
+                            "Returned empty response"
+                        ) //Toast.makeText(getContext(),"Nothing returned",Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call<String?>, t: Throwable) {}
+        })
+
+
+    }
+
+
+
 
     /** Called when the user clicks a marker.  */
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -143,7 +206,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         var position = marker.tag
 
         infos_station.text=""
-        infos_station.text=retroModelArrayList[position as Int].station_id.toString()
+        infos_station.text="La station peut louer des vélos : "+
+                retroModelArrayList[position as Int].isIs_renting.toString()+
+                "Nombre de vélos disponibles : "+
+                retroModelArrayList[position as Int].numBikesAvailable.toString()
 
 
         // Return false to indicate that we have not consumed the event and that we wish
