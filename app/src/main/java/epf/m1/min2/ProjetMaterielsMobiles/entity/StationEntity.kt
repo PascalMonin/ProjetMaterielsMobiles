@@ -14,10 +14,10 @@ data class Station(
     var is_installed: Boolean = false,
     var is_renting: Boolean = false,
     var is_returning: Boolean = false,
-    val last_reported: String,
+    var last_reported: String,
     var numBikesAvailable: Int = 0,
-    val numDocksAvailable: Int = 0,
-    val num_bikes_available: Int = 0,
-    val num_bikes_available_types: String,
-    val liked:Boolean = false
+    var numDocksAvailable: Int = 0,
+    var num_bikes_available: Int = 0,
+    var num_bikes_available_types: String,
+    var liked:Boolean = false
 )

@@ -32,7 +32,10 @@ class StationAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         //recup infos station
         val currentStation=stationList[position]
-        holder.stationInfo?.text=currentStation.name
+        holder.stationInfo?.text=currentStation.name + "Nombre de vélos disponibles : " +
+                currentStation.numBikesAvailable.toString() +
+                "\n" + "Nombre de places disponibles : " +
+                currentStation.numDocksAvailable.toString()
 
         if(currentStation.liked){
             holder.starIcon.setImageResource(R.drawable.ic_like)
