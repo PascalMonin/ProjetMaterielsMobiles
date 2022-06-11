@@ -4,9 +4,12 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/drawable/ic_launcher_background.xml" value="0.1785" />
-        <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/activity_maps.xml" value="0.1" />
+        <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/activity_maps.xml" value="0.22" />
+        <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/fragment_home.xml" value="0.3333333333333333" />
         <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/fragment_map.xml" value="0.17864583333333334" />
         <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/fragment_maps.xml" value="0.134765625" />
+        <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/item_horizontal_station.xml" value="0.17864583333333334" />
+        <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/item_vertical_station.xml" value="0.6" />
         <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/liste_bornes.xml" value="0.1796875" />
         <entry key="..\:/Users/anato/Documents/ProjetMaterielsMobiles/app/src/main/res/layout/main.xml" value="0.1796875" />
         <entry key="..\:/Users/pasca/AndroidStudioProjects/ProjetMaterielsMobiles/app/src/main/res/layout/activity_maps.xml" value="0.4466666666666667" />

@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -16,7 +17,9 @@ import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface
 import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface2
 import epf.m1.min2.ProjetMaterielsMobiles.api.RetroModel
 import epf.m1.min2.ProjetMaterielsMobiles.databinding.ActivityMapsBinding
+import epf.m1.min2.ProjetMaterielsMobiles.fragments.HomeFragment
 import kotlinx.android.synthetic.main.activity_maps.*
+import kotlinx.android.synthetic.main.fragment_home.*
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
@@ -24,13 +27,18 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
-    private val retroModelArrayList: ArrayList<RetroModel> = ArrayList()
+    val retroModelArrayList: ArrayList<RetroModel> = ArrayList()
+
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +50,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        val transaction=supportFragmentManager.beginTransaction()
+        transaction.replace(R.id.fragment_container,HomeFragment(this))
+        transaction.addToBackStack(null)
+        transaction.commit()
+
+
     }
 
     /**
@@ -100,48 +115,57 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
 
 
-    private fun createMarkers(response: String) {
-        try {
-            //getting the whole json object from the response
-            val obj = JSONObject(response)
+    private fun createMarkers(response: String) = try {
+        //getting the whole json object from the response
+        val obj = JSONObject(response)
 
-            Toast.makeText(this@MapsActivity, "test", Toast.LENGTH_SHORT)
-                .show()
-            var dataArray = obj.getJSONObject("data") //.getJSONArray("data")
+        Toast.makeText(this@MapsActivity, "test", Toast.LENGTH_SHORT)
+            .show()
+        var dataArray = obj.getJSONObject("data") //.getJSONArray("data")
 
-            var stationsArray = dataArray.getJSONArray("stations")
+        var stationsArray = dataArray.getJSONArray("stations")
 
-            for (i in 0 until stationsArray.length()) {
-                val retroModel = RetroModel()
-                val dataObj = stationsArray.getJSONObject(i)
-                retroModel.station_id=dataObj.getString("station_id").toLong()
-                retroModel.name=dataObj.getString("name")
-                retroModel.lat = dataObj.getString("lat").toDouble()
-                retroModel.lon = dataObj.getString("lon").toDouble()
-                retroModel.capacity=dataObj.getString("capacity").toInt()
-                retroModel.stationCode=dataObj.getString("stationCode")
-                retroModelArrayList.add(retroModel)
+        for (i in 0 until stationsArray.length()) {
+            val dataObj = stationsArray.getJSONObject(i)
+            val retroModel = RetroModel(
 
-            }
+                    dataObj.getString("station_id").toLong(),
+                    dataObj.getString("name"),
+                    dataObj.getString("lat").toDouble(),
+                    dataObj.getString("lon").toDouble(),
+                    dataObj.getString("capacity").toInt(),
+                    dataObj.getString("stationCode"),
+            false,
+            false,
+            false,
+                "",
+                0,
+                0,
+                0,
+                "",
+                false
+            )
+            retroModelArrayList.add(retroModel)
 
-
-            for (j in 0 until retroModelArrayList.size) {
-                var marker = mMap.addMarker(
-                    MarkerOptions()
-                        .position(LatLng(retroModelArrayList[j].lat, retroModelArrayList[j].lon))
-                        .title("Station")
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                )
-                marker?.tag=j
-                //.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_velo))
-
-            }
-
-            detailsStation()
-
-        } catch (e: JSONException) {
-            e.printStackTrace()
         }
+
+
+        for (j in 0 until retroModelArrayList.size) {
+            var marker = mMap.addMarker(
+                MarkerOptions()
+                    .position(LatLng(retroModelArrayList[j].lat, retroModelArrayList[j].lon))
+                    .title("Station")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+            )
+            marker?.tag=j
+            //.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_velo))
+
+        }
+
+        detailsStation()
+
+    } catch (e: JSONException) {
+        e.printStackTrace()
     }
 
 
@@ -173,13 +197,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                             for(l in 0 until stationsArray.length()){
                                 val dataObj = stationsArray.getJSONObject(l)
                                 if (retroModelArrayList[k].station_id==dataObj.getString("station_id").toLong()){
-                                    retroModelArrayList[k].isIs_installed=dataObj.getString("is_installed").toInt().equals(1)
-                                    retroModelArrayList[k].isIs_renting=dataObj.getString("is_renting").toInt().equals(1)
-                                    retroModelArrayList[k].isIs_returning=dataObj.getString("is_returning").toInt().equals(1)
+                                    retroModelArrayList[k].is_installed=
+                                        dataObj.getString("is_installed").toInt() == 1
+                                    retroModelArrayList[k].is_renting=
+                                        dataObj.getString("is_renting").toInt() == 1
+                                    retroModelArrayList[k].is_returning=
+                                        dataObj.getString("is_returning").toInt() == 1
                                     retroModelArrayList[k].numBikesAvailable=dataObj.getString("numBikesAvailable").toInt()
                                 }
                             }
                         }
+
 
 
                     } else {
@@ -195,8 +223,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         })
 
 
-    }
 
+    }
 
 
 
@@ -205,17 +233,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
         var position = marker.tag
 
-        infos_station.text=""
-        infos_station.text="La station peut louer des vélos : "+
-                retroModelArrayList[position as Int].isIs_renting.toString()+
+        texte_info.text="La station peut louer des vélos : "+
+                retroModelArrayList[position as Int].is_renting.toString()+"\n"+
                 "Nombre de vélos disponibles : "+
                 retroModelArrayList[position as Int].numBikesAvailable.toString()
-
 
         // Return false to indicate that we have not consumed the event and that we wish
         // for the default behavior to occur (which is for the camera to move such that the
         // marker is centered and for the marker's info window to open, if it has one).
         return false
     }
+
 
 }
