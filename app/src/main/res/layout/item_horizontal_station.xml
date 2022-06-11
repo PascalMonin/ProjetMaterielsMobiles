@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="150dp"
+    android:layout_height="100dp"
+    android:layout_marginLeft="10dp">
+
+    <TextView
+        android:id="@+id/info_station"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:text="Info1"/>
+
+    <ImageView
+        android:id="@+id/star_icon"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="120dp"
+        android:src="@drawable/ic_unlike"/>
+
+</androidx.cardview.widget.CardView>
