@@ -1,12 +1,15 @@
-package epf.m1.min2.ProjetMaterielsMobiles.api
+package epf.m1.min2.ProjetMaterielsMobiles.entity
 
-import java.util.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
-class RetroModel(
-    var station_id: Long,
-    var name: String,
+@Entity
+data class Station(
     var lat:Double,
     var lon: Double,
+    @PrimaryKey var station_id: Long,
+    var name: String,
     var capacity: Int,
     var is_installed: Boolean = false,
     var is_renting: Boolean = false,

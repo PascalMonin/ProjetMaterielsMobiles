@@ -10,10 +10,11 @@ import androidx.recyclerview.widget.RecyclerView
 import epf.m1.min2.ProjetMaterielsMobiles.MapsActivity
 import epf.m1.min2.ProjetMaterielsMobiles.R
 import epf.m1.min2.ProjetMaterielsMobiles.api.RetroModel
+import epf.m1.min2.ProjetMaterielsMobiles.entity.Station
 
 class StationAdapter(
     private val context: MapsActivity,
-    private val stationList:List<RetroModel>,
+    private val stationList:ArrayList<Station>,
     private val layoutId:Int
     ) : RecyclerView.Adapter<StationAdapter.ViewHolder>(){
     class ViewHolder(view:View):RecyclerView.ViewHolder(view){

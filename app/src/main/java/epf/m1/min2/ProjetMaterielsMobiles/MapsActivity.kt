@@ -1,10 +1,17 @@
 package epf.m1.min2.ProjetMaterielsMobiles
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.RecyclerView
+import androidx.core.app.ActivityCompat
+import androidx.room.Room
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -17,9 +24,10 @@ import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface
 import epf.m1.min2.ProjetMaterielsMobiles.api.ApiInterface2
 import epf.m1.min2.ProjetMaterielsMobiles.api.RetroModel
 import epf.m1.min2.ProjetMaterielsMobiles.databinding.ActivityMapsBinding
+import epf.m1.min2.ProjetMaterielsMobiles.db.AppDatabase
+import epf.m1.min2.ProjetMaterielsMobiles.entity.Station
 import epf.m1.min2.ProjetMaterielsMobiles.fragments.HomeFragment
 import kotlinx.android.synthetic.main.activity_maps.*
-import kotlinx.android.synthetic.main.fragment_home.*
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
@@ -27,7 +35,6 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
-import java.util.*
 import kotlin.collections.ArrayList
 
 
@@ -37,7 +44,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
     private lateinit var binding: ActivityMapsBinding
     val retroModelArrayList: ArrayList<RetroModel> = ArrayList()
 
-
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,160 +63,126 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         transaction.addToBackStack(null)
         transaction.commit()
 
-
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
 
-        // Add a marker in Sydney and move the camera
-        val Paris = LatLng(48.85, 2.34)
-        //mMap.addMarker(MarkerOptions().position(Paris).title("Marker sur Paris"))
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Paris, 11.5f))
+        var pos = LatLng(48.85, 2.34)
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedLocationClient.lastLocation.addOnSuccessListener {
+                    location ->
+                if (location != null) {
+                    pos = LatLng(location.latitude, location.latitude)
+                }
+            }
+
+            return
+        }
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 16f))
         mMap.clear()
 
         // Set a listener for marker click.
         mMap.setOnMarkerClickListener(this)
 
         getResponse()
-
+        createMarkers()
     }
 
     private fun getResponse() {
-        val retrofit = Retrofit.Builder()
+        val retrofitInfo = Retrofit.Builder()
             .baseUrl(ApiInterface.JSONURL)
             .addConverterFactory(ScalarsConverterFactory.create())
             .build()
-        val api = retrofit.create(ApiInterface::class.java)
-        val call = api.string
-        call.enqueue(object : Callback<String?> {
-            override fun onResponse(call: Call<String?>, response: Response<String?>) {
-                Log.i("Responsestring", response.body().toString())
-                //Toast.makeText()
-                if (response.isSuccessful) {
-                    if (response.body() != null) {
-                        Log.i("onSuccess", response.body().toString())
-                        val jsonResponse = response.body().toString()
-                        createMarkers(jsonResponse)
-                    } else {
-                        Log.i(
-                            "onEmptyResponse",
-                            "Returned empty response"
-                        ) //Toast.makeText(getContext(),"Nothing returned",Toast.LENGTH_LONG).show();
-                    }
-                }
-            }
+        val apiInfo = retrofitInfo.create(ApiInterface::class.java)
+        val callInfo = apiInfo.string
+        callInfo.enqueue(object : Callback<String?> {
+            override fun onResponse(call: Call<String?>, responseInfo: Response<String?>) {
+                if (responseInfo.isSuccessful) {
+                    if (responseInfo.body() != null) {
+                        val jsonResponse = responseInfo.body().toString()
+                        val jsonArray = JSONObject(responseInfo.body().toString())
+                            .getJSONObject("data")
+                            .getJSONArray("stations")
 
-            override fun onFailure(call: Call<String?>, t: Throwable) {}
-        })
-    }
+                        val stationList: ArrayList<Station> = ArrayList()
+                        for (i in 0 until jsonArray.length()) {
+                            val station : Station
+                            val dataObj = jsonArray.getJSONObject(i)
+                            station = Station(
+                                dataObj.getString("lat").toDouble(),
+                                dataObj.getString("lon").toDouble(),
+                                dataObj.getLong("station_id"),
+                                dataObj.getString("name"),
+                                dataObj.getInt("capacity"),
+                                false,
+                                false,
+                                false,
+                                "",
+                                0,
+                                0,
+                                0,
+                                "",
+                                false
+                            )
+                            stationList.add(station)
+                        }
+                        val retrofitStatus = Retrofit.Builder()
+                            .baseUrl(ApiInterface2.JSONURL2)
+                            .addConverterFactory(ScalarsConverterFactory.create())
+                            .build()
+                        val apiStatus = retrofitStatus.create(ApiInterface2::class.java)
+                        val callStatus = apiStatus.string2
+                        callStatus.enqueue(object : Callback<String?> {
+                            override fun onResponse(call: Call<String?>, responseStatus: Response<String?>) {
+                                if (responseStatus.isSuccessful) {
+                                    if (responseStatus.body() != null) {
+                                        val jsonResponse = responseStatus.body().toString()
 
+                                        val obj2 = JSONObject(jsonResponse)
+                                        val dataArray = obj2.getJSONObject("data")
 
+                                        val stationsArray = dataArray.getJSONArray("stations")
 
-    private fun createMarkers(response: String) = try {
-        //getting the whole json object from the response
-        val obj = JSONObject(response)
+                                        for(k in 0 until stationList.size){
+                                            for(l in 0 until stationsArray.length()){
+                                                val dataObj = stationsArray.getJSONObject(l)
+                                                if (stationList[k].station_id==dataObj.getString("station_id").toLong()){
+                                                    stationList[k].is_installed=
+                                                        dataObj.getString("is_installed").toInt() == 1
+                                                    stationList[k].is_renting=
+                                                        dataObj.getString("is_renting").toInt() == 1
+                                                    stationList[k].is_returning=
+                                                        dataObj.getString("is_returning").toInt() == 1
+                                                    stationList[k].numBikesAvailable=dataObj.getString("numBikesAvailable").toInt()
+                                                }
+                                            }
+                                        }
+                                        val list: List<Station> = stationList.toList()
 
-        Toast.makeText(this@MapsActivity, "test", Toast.LENGTH_SHORT)
-            .show()
-        var dataArray = obj.getJSONObject("data") //.getJSONArray("data")
-
-        var stationsArray = dataArray.getJSONArray("stations")
-
-        for (i in 0 until stationsArray.length()) {
-            val dataObj = stationsArray.getJSONObject(i)
-            val retroModel = RetroModel(
-
-                    dataObj.getString("station_id").toLong(),
-                    dataObj.getString("name"),
-                    dataObj.getString("lat").toDouble(),
-                    dataObj.getString("lon").toDouble(),
-                    dataObj.getString("capacity").toInt(),
-                    dataObj.getString("stationCode"),
-            false,
-            false,
-            false,
-                "",
-                0,
-                0,
-                0,
-                "",
-                false
-            )
-            retroModelArrayList.add(retroModel)
-
-        }
-
-
-        for (j in 0 until retroModelArrayList.size) {
-            var marker = mMap.addMarker(
-                MarkerOptions()
-                    .position(LatLng(retroModelArrayList[j].lat, retroModelArrayList[j].lon))
-                    .title("Station")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-            )
-            marker?.tag=j
-            //.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_velo))
-
-        }
-
-        detailsStation()
-
-    } catch (e: JSONException) {
-        e.printStackTrace()
-    }
-
-
-    private fun detailsStation(){
-
-        val retrofit = Retrofit.Builder()
-            .baseUrl(ApiInterface2.JSONURL2)
-            .addConverterFactory(ScalarsConverterFactory.create())
-            .build()
-        val api = retrofit.create(ApiInterface2::class.java)
-        val call = api.string2
-        call.enqueue(object : Callback<String?> {
-            override fun onResponse(call: Call<String?>, response: Response<String?>) {
-                Log.i("Responsestring", response.body().toString())
-                //Toast.makeText()
-                if (response.isSuccessful) {
-                    if (response.body() != null) {
-                        Log.i("onSuccess", response.body().toString())
-                        val jsonResponse = response.body().toString()
-
-
-                        val obj2 = JSONObject(jsonResponse)
-                        val dataArray = obj2.getJSONObject("data") //.getJSONArray("data")
-
-                        val stationsArray = dataArray.getJSONArray("stations")
-
-
-                        for(k in 0 until retroModelArrayList.size){
-                            for(l in 0 until stationsArray.length()){
-                                val dataObj = stationsArray.getJSONObject(l)
-                                if (retroModelArrayList[k].station_id==dataObj.getString("station_id").toLong()){
-                                    retroModelArrayList[k].is_installed=
-                                        dataObj.getString("is_installed").toInt() == 1
-                                    retroModelArrayList[k].is_renting=
-                                        dataObj.getString("is_renting").toInt() == 1
-                                    retroModelArrayList[k].is_returning=
-                                        dataObj.getString("is_returning").toInt() == 1
-                                    retroModelArrayList[k].numBikesAvailable=dataObj.getString("numBikesAvailable").toInt()
+                                        val db = getDatabase(applicationContext)
+                                        db.stationDao().insertAll(list)
+                                    } else {
+                                        Log.i(
+                                            "onEmptyResponse",
+                                            "Returned empty response"
+                                        ) //Toast.makeText(getContext(),"Nothing returned",Toast.LENGTH_LONG).show();
+                                    }
                                 }
                             }
-                        }
 
 
-
+                            override fun onFailure(call: Call<String?>, t: Throwable) {}
+                        })
                     } else {
                         Log.i(
                             "onEmptyResponse",
@@ -221,22 +194,48 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
 
             override fun onFailure(call: Call<String?>, t: Throwable) {}
         })
-
-
-
     }
 
+    private fun getDatabase(context: Context): AppDatabase {
+        val db = Room.databaseBuilder(
+            context,
+            AppDatabase::class.java, "stationDb"
+        ).allowMainThreadQueries().build()
+        return db
+    }
 
+    private fun createMarkers(){
+        try{
+            val db = getDatabase(applicationContext)
+            val listStation = ArrayList(db.stationDao().getAll())
+            for (j in 0 until listStation.size) {
+                var marker = mMap.addMarker(MarkerOptions()
+                    .position(LatLng(listStation[j].lat,listStation[j].lon))
+                    .title(listStation[j].name)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))
+                marker?.tag=j
+            }
+
+
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+    }
 
     /** Called when the user clicks a marker.  */
     override fun onMarkerClick(marker: Marker): Boolean {
+        val db = getDatabase(applicationContext)
+
+        val stationsList = ArrayList(db.stationDao().getAll())
+
+
 
         var position = marker.tag
 
         texte_info.text="La station peut louer des vélos : "+
-                retroModelArrayList[position as Int].is_renting.toString()+"\n"+
+                stationsList[position as Int].is_renting.toString()+"\n"+
                 "Nombre de vélos disponibles : "+
-                retroModelArrayList[position as Int].numBikesAvailable.toString()
+                stationsList[position as Int].numBikesAvailable.toString()
 
         // Return false to indicate that we have not consumed the event and that we wish
         // for the default behavior to occur (which is for the camera to move such that the
